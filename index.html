@@ -34,11 +34,12 @@
             background: #22252a;
             color: #aeaeae;
             border: 1px solid #444;
-            padding: 15px 25px; /* Bigger tap targets for mobile */
+            padding: 12px 22px;
             border-radius: 6px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
         }
         button.active {
             background: #ff5e00;
@@ -72,6 +73,7 @@
         }
         .separator {
             color: #444;
+            animation: blink 1s step-start infinite;
         }
         .seconds {
             color: #00e1ff;
@@ -91,6 +93,9 @@
             text-transform: uppercase;
             letter-spacing: 2px;
         }
+        @keyframes blink {
+            50% { opacity: 0.2; }
+        }
     </style>
 </head>
 <body>
@@ -98,6 +103,7 @@
     <div class="controls">
         <button id="startBtn">START</button>
         <button id="resetBtn">RESET</button>
+        <button id="fullscreenBtn">FULLSCREEN</button>
     </div>
 
     <div class="timer-container">
@@ -110,25 +116,24 @@
     </div>
 
     <script>
-        // State variables using precise timing loops
         let isRunning = false;
         let startTime = 0;
         let elapsedBeforePause = 0;
         let lastRenderedSeconds = -1;
+        let wakeLock = null;
 
         const minsEl = document.getElementById('mins');
         const secsEl = document.getElementById('secs');
         const ptEl = document.getElementById('ptCounter');
         const startBtn = document.getElementById('startBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
 
         function updateDisplay(totalSeconds) {
             let minutes = Math.floor(totalSeconds / 60);
             if (minutes > 99) minutes = 99; 
             let seconds = totalSeconds % 60;
 
-            // Only redraw the interface text if the actual second changed
-            // This cuts mobile processing overhead to nearly zero
             if (seconds === lastRenderedSeconds) return;
             lastRenderedSeconds = seconds;
 
@@ -152,40 +157,55 @@
             }
         }
 
-        // The Engine: Continuously loops with the mobile display engine
         function tick(timestamp) {
             if (!isRunning) return;
 
-            // Calculate exact elapsed seconds based on real-world time elapsed
             const totalElapsedMs = (timestamp - startTime) + elapsedBeforePause;
-            const totalSeconds = Math.floor(totalElapsedMs / 1000);
+            updateDisplay(Math.floor(totalElapsedMs / 1000));
 
-            updateDisplay(totalSeconds);
-
-            // Request next frame rendering pipeline natively
             requestAnimationFrame(tick);
         }
 
-        function toggleTimer() {
-            if (isRunning) {
-                // Pause State
-                isRunning = false;
-                startBtn.textContent = "START";
-                startBtn.classList.remove('active');
-                // Save exactly how long it was running for
-                elapsedBeforePause += (performance.now() - startTime);
-            } else {
-                // Start State
-                isRunning = true;
-                startBtn.textContent = "PAUSE";
-                startBtn.classList.add('active');
-                // Sync to current strict system uptime
-                startTime = performance.now();
-                requestAnimationFrame(tick);
+        // --- WakeLock Safety Handlers ---
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log(`WakeLock request failed: ${err.message}`);
+                }
             }
         }
 
-        function resetTimer() {
+        async function releaseWakeLock() {
+            if (wakeLock !== null) {
+                try {
+                    await wakeLock.release();
+                    wakeLock = null;
+                } catch (err) {
+                    console.log(`WakeLock release failed: ${err.message}`);
+                }
+            }
+        }
+
+        async function toggleTimer() {
+            if (isRunning) {
+                isRunning = false;
+                startBtn.textContent = "START";
+                startBtn.classList.remove('active');
+                elapsedBeforePause += (performance.now() - startTime);
+                await releaseWakeLock();
+            } else {
+                isRunning = true;
+                startBtn.textContent = "PAUSE";
+                startBtn.classList.add('active');
+                startTime = performance.now();
+                requestAnimationFrame(tick);
+                await requestWakeLock(); // Keeps screen awake while active
+            }
+        }
+
+        async function resetTimer() {
             isRunning = false;
             startTime = 0;
             elapsedBeforePause = 0;
@@ -195,11 +215,34 @@
             minsEl.textContent = "00";
             secsEl.textContent = "00";
             ptEl.textContent = "";
+            await releaseWakeLock();
         }
 
-        // Use direct event binding—Brave handles these cleanest locally
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Fullscreen blocked: ${err.message}`);
+                });
+                fullscreenBtn.textContent = "EXIT SCREEN";
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.textContent = "FULLSCREEN";
+            }
+        }
+
+        // Re-listen for page visibility switches 
+        // (If you swipe away to check an email and come back, it safely reactivates the lock)
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
         startBtn.onclick = toggleTimer;
         resetBtn.onclick = resetTimer;
+        fullscreenBtn.onclick = toggleFullscreen;
+
+        updateDisplay(0);
     </script>
 </body>
 </html>
