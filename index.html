@@ -27,14 +27,14 @@
             position: absolute;
             top: 15px;
             display: flex;
-            gap: 95px; /* Added significant horizontal space between buttons */
+            gap: 95px; /* Updated horizontal gap to 95px for distinct separation */
             z-index: 10;
         }
         button {
             background: #22252a;
             color: #aeaeae;
             border: 1px solid #444;
-            padding: 12px 22px; /* Reverted to original button size */
+            padding: 12px 22px;
             border-radius: 6px;
             font-size: 14px;
             font-weight: 600;
@@ -85,14 +85,21 @@
             margin-top: 4vh;
             font-size: 8vw;
             font-weight: 800;
-            display: inline-flex; /* Shrinks the box wrapper tightly to the content size */
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             text-transform: uppercase;
             letter-spacing: 2px;
             border-radius: 8px;
-            padding: 4px 24px; /* Internal padding just to give the text breathing room inside its box */
+            padding: 4px 24px;
             background-color: transparent; 
+            color: #ffcc00; /* Locked default text color to high-intensity yellow */
+            /* Added black outline stroke so yellow text stays completely legible on light backgrounds */
+            text-shadow: 
+                -2px -2px 0 #000,  
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000;
             transition: all 0.1s ease;
         }
         @keyframes blink {
@@ -148,36 +155,36 @@
             minsEl.textContent = String(minutes).padStart(2, '0');
             secsEl.textContent = String(seconds).padStart(2, '0');
 
-            // High-contrast, tight background cycling (White -> Sky Blue -> Black -> Repeat)
+            // Set high-intensity yellow explicitly across all conditions, cycling background box colors
+            ptEl.style.color = "#ffcc00";
+
             if (seconds >= 0 && seconds <= 9) {
                 ptEl.textContent = ""; 
-                ptEl.style.backgroundColor = "transparent"; // Hidden completely between 0-9s
+                ptEl.style.backgroundColor = "transparent";
+                ptEl.style.border = "none";
             } else if (seconds >= 10 && seconds < 15) {
-                ptEl.textContent = "1/6"; 
-                ptEl.style.backgroundColor = "#ffffff"; // White
-                ptEl.style.color = "#000000";           // Black text for readability
+                ptEl.textContent = "1/6";
+                ptEl.style.backgroundColor = "#ffffff"; // White background box
+                ptEl.style.border = "none";
             } else if (seconds >= 15 && seconds < 20) {
                 ptEl.textContent = "1/4"; 
-                ptEl.style.backgroundColor = "#00bfff"; // Sky Blue
-                ptEl.style.color = "#000000";           // Black text for readability
+                ptEl.style.backgroundColor = "#00bfff"; // Sky Blue background box
+                ptEl.style.border = "none";
             } else if (seconds >= 20 && seconds < 30) {
                 ptEl.textContent = "1/3"; 
-                ptEl.style.backgroundColor = "#000000"; // Black
-                ptEl.style.color = "#ffcc00";           // Original yellow text
-                ptEl.style.border = "1px solid #444";   // Subtle boundary line so black box is distinct
+                ptEl.style.backgroundColor = "#000000"; // Black background box
+                ptEl.style.border = "1px solid #444";
             } else if (seconds >= 30 && seconds < 45) {
                 ptEl.textContent = "1/2"; 
-                ptEl.style.backgroundColor = "#ffffff"; // White
-                ptEl.style.color = "#000000";
+                ptEl.style.backgroundColor = "#ffffff"; // White background box
                 ptEl.style.border = "none";
             } else if (seconds >= 45 && seconds < 50) {
                 ptEl.textContent = "3/4"; 
-                ptEl.style.backgroundColor = "#00bfff"; // Sky Blue
-                ptEl.style.color = "#000000";
+                ptEl.style.backgroundColor = "#00bfff"; // Sky Blue background box
+                ptEl.style.border = "none";
             } else if (seconds >= 50 && seconds <= 59) {
                 ptEl.textContent = 60 - seconds;
-                ptEl.style.backgroundColor = "#000000"; // Black
-                ptEl.style.color = "#ffcc00";           // Maintained original yellow color
+                ptEl.style.backgroundColor = "#000000"; // Black background box
                 ptEl.style.border = "1px solid #444";
             }
         }
